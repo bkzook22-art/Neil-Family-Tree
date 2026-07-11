@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Descendants Search</title>
+    <!-- FIX 1: Corrected the duplicate 'dist/dist' typo in the script URL below -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Back to Main Search</a>
+    </nav>
+
+    <!-- Replace your current <h2> and <select> with this block -->
+<h2>Search Descendants</h2>
+
+<div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; max-width: 800px; margin-left: auto; margin-right: auto;">
+    <!-- Person Dropdown -->
+    <div style="flex: 1;">
+        <label style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Select a Parent:</label>
+        <select id="personSelect" placeholder="Search for a parent..."></select>
+    </div>
+    
+    <!-- Direction Toggle Dropdown -->
+    <div style="flex: 1;">
+        <label style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Tree Direction:</label>
+        <select id="directionSelect">
+            <option value="down">Top-Down (Ancestor to Descendants)</option>
+            <option value="up">Bottom-Up (Descendants back to Ancestor)</option>
+        </select>
+    </div>
+</div>
+
+<div id="results"></div>
+
+    <!-- Load main script first so genealogyData and displayData are available -->
+    <script src="script.js"></script>
+    
+    <!-- Descendants-specific logic -->
+    <!-- Inside descendants.html -->
+<script>
+    document.addEventListener('DataLoaded', () => {
+        const select = document.getElementById('personSelect');
+        const directionSelect = document.getElementById('directionSelect');
+
+        // 1. Populate the dropdown options
+        genealogyData.forEach(person => {
+            const opt = document.createElement('option');
+            opt.value = person.IndividualUID;
+            opt.textContent = person["Name Array"];
+            select.appendChild(opt);
+        });
+
+        // 2. Initialize TomSelect 
+        new TomSelect("#personSelect", {
+            create: false,
+            sortField: { field: "text", direction: "asc" }
+        });
+        new TomSelect("#directionSelect", {
+            create: false
+        });
+
+        // 3. Central Render Function
+        const renderTree = () => {
+            const selectedUID = select.value; 
+            const direction = directionSelect.value;
+            
+            if (!selectedUID || selectedUID === "0") {
+                document.getElementById('results').innerHTML = '';
+                return;
+            }
+
+            // Pass the chosen direction into the builder
+            const finalHTML = buildFamilyBlock(selectedUID, 1, direction);
+            document.getElementById('results').innerHTML = `<div class="tree-container">${finalHTML}</div>`;
+        };
+
+        // Trigger render when either dropdown is changed
+        select.addEventListener('change', renderTree);
+        directionSelect.addEventListener('change', renderTree);
+    });
+
+    // Helper to generate a clean member card
+    const makeCard = (person, role) => {
+        if (!person) return '';
+        return `
+            <div class="card">
+                <h3>${person["First Name"]} ${person["Last Name"]}</h3>
+                <p><strong>${role}</strong></p>
+                <p>Born: ${person["Born"] || 'Unknown'}</p>
+                <p>Died: ${person["Died"] || 'Present'}</p>
+            </div>
+        `;
+    };
+
+    // Recursive Family Block Builder with Directional Logic
+    function buildFamilyBlock(parentUID, generation, direction) {
+        const mainParent = genealogyData.find(p => p.IndividualUID === parentUID);
+        if (!mainParent) return '';
+
+        const partner = genealogyData.find(p => 
+            (mainParent.PartnerUID && p.IndividualUID === mainParent.PartnerUID) || 
+            (p.PartnerUID && p.PartnerUID === mainParent.IndividualUID)
+        );
+
+        const children = genealogyData.filter(p => 
+            p.ParentUID === mainParent.IndividualUID || 
+            (partner && p.ParentUID === partner.IndividualUID)
+        );
+
+        // A. Build the HTML components as isolated variables first
+        let headerHTML = `<div class="generation-label">Generation ${generation}</div>`;
+        
+        let parentsHTML = `<div class="parents-row">`;
+        parentsHTML += makeCard(mainParent, mainParent.Gender === "Male" ? "Father" : "Mother");
+        if (partner) parentsHTML += makeCard(partner, partner.Gender === "Male" ? "Father" : "Mother");
+        parentsHTML += `</div>`;
+
+        let childrenHTML = '';
+        let nextGenHTML = '';
+
+        if (children.length > 0) {
+            childrenHTML = `<div class="children-row">`;
+            childrenHTML += children.map(child => makeCard(child, child.Gender === "Male" ? "Son" : "Daughter")).join('');
+            childrenHTML += `</div>`;
+
+            children.forEach(child => {
+                const hasChildren = genealogyData.some(p => p.ParentUID === child.IndividualUID);
+                if (hasChildren) {
+                    nextGenHTML += buildFamilyBlock(child.IndividualUID, generation + 1, direction);
+                }
+            });
+
+            if (nextGenHTML !== '') {
+                // If building upward, move the dashed separator line to the bottom of the nested block instead of the top
+                const borderAdjust = direction === 'up' 
+                    ? 'border-top: none; border-bottom: 1px dashed #444; margin-top: 0; margin-bottom: 30px; padding-top: 0; padding-bottom: 20px;' 
+                    : '';
+                nextGenHTML = `<div class="nested-families" style="${borderAdjust}">${nextGenHTML}</div>`;
+            }
+        }
+
+        // B. Assemble the HTML string in the correct order based on the toggle
+        let html = `<div class="family-block">`;
+
+        if (direction === 'up') {
+            // BOTTOM-UP: Furthest relatives appear first, cascading down into the root ancestors
+            if (nextGenHTML) html += nextGenHTML;
+            if (childrenHTML) html += childrenHTML;
+            html += parentsHTML;
+            html += headerHTML;
+        } else {
+            // TOP-DOWN: Standard layout
+            html += headerHTML;
+            html += parentsHTML;
+            if (childrenHTML) html += childrenHTML;
+            if (nextGenHTML) html += nextGenHTML;
+        }
+
+        html += `</div>`; 
+        return html;
+    }
+</script>
+</body>
+</html>

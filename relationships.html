@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Relationship Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+</head>
+<body>
+    <nav>
+        <a href="index.html">Back to Main Search</a> | 
+        <a href="descendants.html">Descendants Tree</a>
+    </nav>
+
+    <h2>Find Relatives</h2>
+    
+    <div style="display: flex; gap: 20px; justify-content: center; margin-bottom: 30px; max-width: 900px; margin-left: auto; margin-right: auto; flex-wrap: wrap;">
+        <!-- Person Dropdown -->
+        <div style="flex: 2; min-width: 200px;">
+            <label style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Select a Person:</label>
+            <select id="personSelect" placeholder="Search for someone..."></select>
+        </div>
+        
+        <!-- Relationship Dropdown -->
+        <div style="flex: 2; min-width: 200px;">
+            <label style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Select Relationship:</label>
+            <select id="relationshipSelect">
+                <option value="">Choose a relationship...</option>
+                <option value="parents">Parents</option>
+                <option value="grandparents">Grandparents / Great-Grandparents</option>
+                <option value="children">Children</option>
+                <option value="grandchildren">Grandchildren</option>
+                <option value="siblings">Siblings</option>
+                <option value="aunts_uncles">Aunts & Uncles</option>
+                <option value="first_cousins">Cousins</option>
+                <option value="nieces_nephews">Nieces & Nephews</option>
+            </select>
+        </div>
+
+        <!-- Dynamic Modifiers Section -->
+        <div id="modifierContainer" style="display: flex; gap: 10px; flex: 3; min-width: 250px;">
+            <!-- Generation Modifier (Great, Great-Great, 1st, 2nd...) -->
+            <div id="genModWrapper" style="display: none; flex: 1;">
+                <label id="genModLabel" style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Level:</label>
+                <select id="genModSelect"></select>
+            </div>
+
+            <!-- Times Removed Modifier (Only for Cousins) -->
+            <div id="removedWrapper" style="display: none; flex: 1;">
+                <label style="color: #4da6ff; font-weight: bold; margin-bottom: 5px; display: block;">Removed:</label>
+                <select id="removedSelect">
+                    <option value="0">Once / Not Removed</option>
+                    <option value="1">1x Removed</option>
+                    <option value="2">2x Removed</option>
+                    <option value="3">3x Removed</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Results Container -->
+    <div class="tree-container" id="results">
+        <p style="color: #888; text-align: center;">Select a person and a relationship to view relatives.</p>
+    </div>
+
+    <script src="script.js"></script>
+    
+    <script>
+let tsPerson, tsRelation, tsGenMod, tsRemoved;
+
+        document.addEventListener('DataLoaded', () => {
+            const personSelect = document.getElementById('personSelect');
+            const relationSelect = document.getElementById('relationshipSelect');
+
+            // 1. Populate the Person dropdown
+            genealogyData.forEach(person => {
+                const opt = document.createElement('option');
+                opt.value = person.IndividualUID;
+                opt.textContent = person["Name Array"];
+                personSelect.appendChild(opt);
+            });
+
+            // 2. Initialize TomSelect instances
+            tsPerson = new TomSelect("#personSelect", {
+                create: false,
+                sortField: { field: "text", direction: "asc" }
+            });
+            tsRelation = new TomSelect("#relationshipSelect", {
+                create: false
+            });
+            tsGenMod = new TomSelect("#genModSelect", { create: false });
+            tsRemoved = new TomSelect("#removedSelect", { create: false });
+
+            // 3. Setup Change Listeners
+            tsPerson.on('change', runRelationshipEngine);
+            tsRelation.on('change', handlePrimaryRelationChange);
+            tsGenMod.on('change', runRelationshipEngine);
+            tsRemoved.on('change', runRelationshipEngine);
+        });
+
+        // Dynamic Visibility Control for Sub-menus
+        function handlePrimaryRelationChange(value) {
+            const genModWrapper = document.getElementById('genModWrapper');
+            const removedWrapper = document.getElementById('removedWrapper');
+            const genModLabel = document.getElementById('genModLabel');
+
+            // Clear previous options out of TomSelect safely
+            tsGenMod.clearOptions();
+
+            if (value === 'grandparents' || value === 'aunts_uncles') {
+                genModLabel.textContent = "Prefix:";
+                tsGenMod.addOption([
+                    { value: '0', text: 'Standard' },
+                    { value: '1', text: 'Great-' },
+                    { value: '2', text: 'Great-Great-' },
+                    { value: '3', text: 'Great-Great-Great-' }
+                ]);
+                tsGenMod.setValue('0');
+                genModWrapper.style.display = 'block';
+                removedWrapper.style.display = 'none';
+            } else if (value === 'first_cousins') {
+                genModLabel.textContent = "Cousin Type:";
+                tsGenMod.addOption([
+                    { value: '1', text: '1st Cousin' }, // Standard logic will now use this
+                    { value: '2', text: '2nd Cousin' },
+                    { value: '3', text: '3rd Cousin' },
+                    { value: '4', text: '4th Cousin' }
+                ]);
+                tsGenMod.setValue('1'); // Ensure it defaults to 1st Cousin
+                genModWrapper.style.display = 'block';
+                removedWrapper.style.display = 'block';
+            } else {
+                genModWrapper.style.display = 'none';
+                removedWrapper.style.display = 'none';
+            }
+
+            runRelationshipEngine();
+        }
+
+        // --- THE RELATIONSHIP ENGINE ---
+        function runRelationshipEngine() {
+    const personUID = tsPerson.getValue();
+    const relationship = tsRelation.getValue();
+    const resultsDiv = document.getElementById('results');
+
+    if (!personUID || !relationship) {
+        resultsDiv.innerHTML = '<p style="color: #888; text-align: center;">Select a person and a relationship to view relatives.</p>';
+        return;
+    }
+
+    const genModVal = parseInt(tsGenMod.getValue()) || 0;
+    const removedVal = parseInt(tsRemoved.getValue()) || 0;
+
+    let relatives = [];
+            switch (relationship) {
+                case 'parents': relatives = getParents(personUID); break;
+                case 'grandparents': relatives = getAncestorsAtGeneration(personUID, 2 + genModVal); break;
+                case 'children': relatives = getChildren(personUID); break;
+                case 'grandchildren': relatives = getDescendantsAtGeneration(personUID, 2); break;
+                case 'siblings': relatives = getSiblings(personUID); break;
+                case 'aunts_uncles': relatives = getAuntsUnclesAdvanced(personUID, genModVal); break;
+                case 'first_cousins': relatives = getCousinsAdvanced(personUID, genModVal, removedVal); break;
+                case 'nieces_nephews': relatives = getNiecesNephews(personUID); break;
+            }
+
+            // 1. Remove duplicates
+    relatives = [...new Map(relatives.map(item => [item.IndividualUID, item])).values()];
+
+    if (relatives.length === 0) {
+        resultsDiv.innerHTML = `<p style="color: #888; text-align: center; padding: 20px;">No relatives found.</p>`;
+        return;
+    }
+
+    // 2. Group by Last Name
+    const groupedRelatives = relatives.reduce((acc, person) => {
+        const surname = person["Last Name"] || "Unknown";
+        if (!acc[surname]) acc[surname] = [];
+        acc[surname].push(person);
+        return acc;
+    }, {});
+
+    // 3. Display the results with headers for each family
+    // Inside runRelationshipEngine, replacing the current .map() rendering:
+
+resultsDiv.innerHTML = Object.keys(groupedRelatives).sort().map(surname => `
+    <div class="family-group" style="margin-bottom: 30px;">
+        <h2 style="border-bottom: 2px solid #4da6ff; padding-bottom: 5px;">${surname} Family</h2>
+        <div class="children-row" style="display: flex; flex-wrap: wrap; gap: 10px;">
+            ${groupedRelatives[surname].map(person => {
+                // Fetch parents for this specific person
+                const parents = getParents(person.IndividualUID);
+                const parentNames = parents.length > 0 
+                    ? parents.map(p => `${p["First Name"]} ${p["Last Name"]}`).join(' & ')
+                    : 'Unknown';
+
+                return `
+                    <div class="card" style="width: 220px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+                        <h3>${person["First Name"]} ${person["Last Name"]}</h3>
+                        <p>Born: ${person["Born"] || 'Unknown'}</p>
+                        <p>Died: ${person["Died"] || 'Present'}</p>
+                        <hr>
+                        <p style="font-size: 0.85em; color: #555;">
+                            <strong>Parents:</strong><br>${parentNames}
+                        </p>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    </div>
+`).join('');
+}
+
+        // --- GENEALOGY TRAVERSAL HELPERS ---
+        
+        function getPartner(uid) {
+            const main = genealogyData.find(p => p.IndividualUID === uid);
+            if (!main) return null;
+            return genealogyData.find(p => 
+                (main.PartnerUID && p.IndividualUID === main.PartnerUID) || 
+                (p.PartnerUID && p.PartnerUID === main.IndividualUID)
+            );
+        }
+
+        function getParents(uid) {
+            const person = genealogyData.find(p => p.IndividualUID === uid);
+            if (!person || !person.ParentUID || person.ParentUID === "0") return [];
+            
+            const parent1 = genealogyData.find(p => p.IndividualUID === person.ParentUID);
+            if (!parent1) return [];
+            
+            const parent2 = getPartner(parent1.IndividualUID);
+            return [parent1, parent2].filter(Boolean);
+        }
+
+        function getChildren(uid) {
+            const partner = getPartner(uid);
+            return genealogyData.filter(p => 
+                p.ParentUID === uid || 
+                (partner && p.ParentUID === partner.IndividualUID)
+            );
+        }
+
+        function getSiblings(uid) {
+            const parents = getParents(uid);
+            if (parents.length === 0) return [];
+            const allChildren = getChildren(parents[0].IndividualUID);
+            return allChildren.filter(p => p.IndividualUID !== uid);
+        }
+
+        // Recursive engine helper to climb up generations (Gen 1=Parents, Gen 2=Grandparents, Gen 3=Great-grandparents...)
+        function getAncestorsAtGeneration(uid, targetGen) {
+            let currentLayer = [uid];
+            for (let i = 0; i < targetGen; i++) {
+                let nextLayer = [];
+                currentLayer.forEach(id => {
+                    const parents = getParents(id);
+                    parents.forEach(p => nextLayer.push(p.IndividualUID));
+                });
+                currentLayer = [...new Set(nextLayer)];
+            }
+            return currentLayer.map(id => genealogyData.find(p => p.IndividualUID === id)).filter(Boolean);
+        }
+
+        // Recursive engine helper to go down generations (Gen 1=Children, Gen 2=Grandchildren...)
+        function getDescendantsAtGeneration(uid, targetGen) {
+            let currentLayer = [uid];
+            for (let i = 0; i < targetGen; i++) {
+                let nextLayer = [];
+                currentLayer.forEach(id => {
+                    const children = getChildren(id);
+                    children.forEach(c => nextLayer.push(c.IndividualUID));
+                });
+                currentLayer = [...new Set(nextLayer)];
+            }
+            return currentLayer.map(id => genealogyData.find(p => p.IndividualUID === id)).filter(Boolean);
+        }
+
+        // Handles Great / Great-Great Aunts and Uncles
+        function getAuntsUnclesAdvanced(uid, greatLevel) {
+    // Standard Aunts/Uncles: Reach Grandparents (2 generations up)
+    // Great-Aunts/Uncles: Reach Great-Grandparents (3 generations up)
+    const targetAncestors = getAncestorsAtGeneration(uid, 2 + greatLevel);
+    let auntsUncles = [];
+    
+    targetAncestors.forEach(ancestor => {
+        // Get all children of the grandparent
+        const children = getChildren(ancestor.IndividualUID);
+        // Exclude the parent of the original person (to leave only siblings)
+        const parents = getParents(uid).map(p => p.IndividualUID);
+        auntsUncles.push(...children.filter(c => !parents.includes(c.IndividualUID)));
+    });
+    
+    return auntsUncles;
+}
+
+        // Handles Cousins, Cousin Degrees, and N-Times Removed
+        function getCousinsAdvanced(uid, degree, removed) {
+    // 1st Cousin (degree 1) = Share Grandparents (2 generations up)
+    // 2nd Cousin (degree 2) = Share Great-Grandparents (3 generations up)
+    
+    // This formula (degree + 1) perfectly maps 1 -> 2, 2 -> 3
+    const generationsUp = degree; 
+    const commonAncestors = getAncestorsAtGeneration(uid, generationsUp);
+    
+    let cousins = [];
+    commonAncestors.forEach(ancestor => {
+        const ancestorSiblings = getSiblings(ancestor.IndividualUID);
+        
+        ancestorSiblings.forEach(sib => {
+            // A 1st cousin is 2 generations down from the grandparent
+            // If degree is 1, generationsUp is 2. 
+            // So stepsDown = 2 + removed. This is exactly right!
+            const stepsDown = generationsUp + removed;
+            
+            cousins.push(...getDescendantsAtGeneration(sib.IndividualUID, stepsDown));
+        });
+    });
+    return cousins;
+}
+
+        function getNiecesNephews(uid) {
+            const siblings = getSiblings(uid);
+            let niecesNephews = [];
+            siblings.forEach(sibling => {
+                niecesNephews.push(...getChildren(sibling.IndividualUID));
+            });
+            return niecesNephews;
+        }
+    </script>
+</body>
+</html>
