@@ -133,8 +133,8 @@
             <div class="person-card" data-uid="${person.IndividualUID}">
                 <h4>${person["Name Array"]}</h4>
                 <p><small>${person["Notes"] || "Member"}</small></p>
-                <p><small>Born: ${person["Born"] || "unknown"}</small></p>
-                <p><small>Died: ${person["Died"] || "unknown"}</small></p>
+                <p><small>Born: ${person["Born"] || "Unknown"}, Died: ${person["Died"] || "Unknown"}</small></p>
+                <p><small>Partner(s): ${person["Partner Array"] || "None"}</small></p>
             </div>
         `;
     }

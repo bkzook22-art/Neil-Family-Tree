@@ -201,8 +201,9 @@
                             return `
                                 <div class="card" style="width: 220px; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
                                     <h3>${person["First Name"]} ${person["Last Name"]}</h3>
-                                    <p>Born: ${person["Born"] || 'Unknown'}</p>
-                                    <p>Died: ${person["Died"] || 'Unknown'}</p>
+                                    <p><small>Born: ${person["Born"] || 'Unknown'}, Died: ${person["Died"] || 'Unknown'}</small></p>
+                                    <p><small>Notes: ${person["Notes"] || 'None'}</small></p>
+                                    <p><small>Partner(s): ${person["Partner Array"] || 'None'}</small></p>
                                     <hr>
                                     <p style="font-size: 0.85em; color: #555;">
                                         <strong>Parents:</strong><br>${parentNames}

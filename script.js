@@ -56,7 +56,9 @@ function displayData(data, container = document.getElementById('results')) {
     container.innerHTML = data.map(person => `
         <div class="card">
             <h4>${person["Name Array"]}</h4>
-            <p>Notes: ${person["Notes"]}</p>
+            <p><small>Born: ${person["Born"] || "Unknown"}, Died: ${person["Died"] || "Unknown"}</small></p>
+            <p><small>Notes: ${person["Notes"] || "None"}</small></p>
+            <p><small>Partner(s): ${person["Partner Array"] || "None"}</small></p>
         </div>
     `).join('');
 }
