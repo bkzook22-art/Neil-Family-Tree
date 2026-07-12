@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Family Members</title>
+</head>
+<body>
+    <nav><a href="surnames.html">Back to Surnames</a></nav>
+    <h2 id="surnameTitle"></h2>
+    <div id="results"></div>
+
+    <script src="script.js"></script>
+    <script>
+    onDataReady(() => {
+        const params = new URLSearchParams(window.location.search);
+        const surname = params.get('surname');
+        if (!surname) return;
+
+        document.getElementById('surnameTitle').textContent = `Family: ${surname}`;
+
+        // 1. Get filtered members
+        const familyMembers = genealogyData.filter(p => p["Last Name"] === surname);
+
+        // 2. Group by generation
+        const grouped = {};
+        familyMembers.forEach(person => {
+            const gen = getGeneration(person, genealogyData);
+            if (!grouped[gen]) grouped[gen] = [];
+            grouped[gen].push(person);
+        });
+
+        // 3. Render
+        const container = document.getElementById('results');
+        container.innerHTML = ""; 
+
+        Object.keys(grouped).sort((a, b) => a - b).forEach(gen => {
+            // ... inside the generation loop ...
+const section = document.createElement('section');
+section.innerHTML = `<h3 style="text-align:center;">GENERATION ${gen}</h3>`;
+
+const divContainer = document.createElement('div');
+divContainer.className = "generation-wrapper"; // Links to the CSS above
+
+section.appendChild(divContainer);
+container.appendChild(section);
+            displayData(grouped[gen], divContainer);
+        });
+    });
+</script>
+</body>
+</html>

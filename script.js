@@ -38,24 +38,54 @@ document.addEventListener('DataLoaded', () => {
     }
 
     // Default display for the main portal page (if results div exists but dropdown doesn't)
-    if (document.getElementById('results') && !document.getElementById('personSelect')) {
-        displayData(genealogyData);
-    }
+    // Updated block: only run if we aren't on the family or hierarchy page
+const isSpecialPage = window.location.pathname.includes('family.html') || 
+                      window.location.pathname.includes('hierarchy.html');
+
+if (document.getElementById('results') && !document.getElementById('personSelect') && !isSpecialPage) {
+    displayData(genealogyData);
+}
 });
 
 
 // 3. Generic fall-back display style (Main Page)
-function displayData(data) {
-    const resultsDiv = document.getElementById('results');
-    if (!resultsDiv) return;
+function displayData(data, container = document.getElementById('results')) {
+    console.log("displayData called with count:", data.length); // <--- ADD THIS
+    if (!container) return;
     
-    resultsDiv.innerHTML = data.map(person => `
+    container.innerHTML = data.map(person => `
         <div class="card">
-            <h3>${person["First Name"]} ${person["Last Name"]}</h3>
-            <p>Born: ${person["Born"] || 'Unknown'}</p>
-            <p>Died: ${person["Died"] || 'Present'}</p>
-            <p>Relationship: ${person["Relationship"] || 'Self'}</p>
-            <p>Notes: ${person["Notes"] || ''}</p>
+            <h4>${person["Name Array"]}</h4>
+            <p>Notes: ${person["Notes"]}</p>
         </div>
     `).join('');
+}
+
+// Calculate the generation level for a person
+function getGeneration(person, allData, depth = 0) {
+    // Safety break: if we go deeper than 20 generations, stop to prevent infinite loops
+    if (depth > 20) return 20;
+
+    // A "root" person is someone whose parents are not in the database
+    const parent1 = allData.find(p => p.IndividualUID == person.ParentUID);
+    const parent2 = allData.find(p => p.IndividualUID == person.PartnerUID);
+
+    if (!parent1 && !parent2) {
+        return depth; // This is a root ancestor
+    }
+
+    // Otherwise, return 1 + the generation of the parent(s)
+    const parent = parent1 || parent2;
+    return getGeneration(parent, allData, depth + 1);
+}
+
+// Add this to the bottom of script.js
+function onDataReady(callback) {
+    if (genealogyData.length > 0) {
+        // Data is already loaded, run immediately
+        callback();
+    } else {
+        // Data is still loading, wait for the event
+        document.addEventListener('DataLoaded', callback);
+    }
 }

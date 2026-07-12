@@ -1,32 +1,40 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- In index.html -->
-<nav>
-    <a href="descendants.html">Go to Descendants Search</a>
-    <a href="relationships.html">Go to Relatives Search</a>
-</nav>
 <head>
     <meta charset="UTF-8">
     <title>Genealogy Explorer</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Family Records</h1>
-    <select id="searchCategory">
-  <option value="First Name">First Name</option>
-  <option value="Last Name">Last Name</option>
-  <option value="Gender">Gender</option>
-  <option value="Born">Born</option>
-  <option value="Died">Died</option>
-  <option value="Notes">Notes</option>
-  <option value="Relationship">Relationship</option>
-</select>
+    <!-- SIDEBAR -->
+    <nav class="sidebar">
+        <h3 style="text-align: center; margin-top: 0;">Menu</h3>
+        
+        <a href="family-branch.html?uid=P1167">View Family Branch</a>
+        <a href="descendants.html">Search Descendants</a>
+        <a href="relationships.html">Calculate Relationship</a>
+    </nav>
 
-  <!-- Add other keys here if needed -->
-</select>
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+        <h1>Family Records</h1>
+        
+        <div style="margin-bottom: 20px;">
+            <select id="searchCategory" style="padding: 5px;">
+                <option value="First Name">First Name</option>
+                <option value="Last Name">Last Name</option>
+                <option value="Gender">Gender</option>
+                <option value="Born">Born</option>
+                <option value="Died">Died</option>
+                <option value="Notes">Notes</option>
+                <option value="Relationship">Relationship</option>
+            </select>
+            
+            <input type="text" id="searchInput" placeholder="Search..." style="padding: 5px; width: 250px;">
+        </div>
 
-<input type="text" id="searchInput" placeholder="Search...">
-    <div id="results"></div>
+        <div class="tree-container" id="results"></div>
+    </div>
 
     <script src="script.js"></script>
 </body>
