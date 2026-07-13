@@ -221,3 +221,50 @@ body {
     font-size: 1.4em;
     margin-top: 10px;
 }
+
+#childrenContainer {
+    display: grid;
+    /* This creates columns that are at least 250px wide */
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    padding: 20px;
+}
+
+.person-card {
+    /* Ensure cards don't have restricted widths that break the grid */
+    width: 100%;
+    margin: 0; 
+}
+
+/* --- UPDATED GRID LAYOUT FOR #results --- */
+#results {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    /* Ensure it doesn't get squeezed by the sidebar */
+    width: 100%;
+}
+
+/* Updated card style inside the results grid */
+#results .card {
+    background: #1e1e1e; /* Matches your defined --input-bg */
+    border: 1px solid #333; /* Matches your --border-color */
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    color: #e0e0e0;
+    margin: 0;
+}
+
+#results .card h4 {
+    margin: 0 0 10px 0;
+    color: #fff;
+    font-size: 1.1em;
+}
+
+#results .card p {
+    margin: 5px 0;
+    font-size: 0.9em;
+    color: #aaa;
+}
