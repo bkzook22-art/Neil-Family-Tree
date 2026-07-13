@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="style.css">
+    <title>Relationship Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <style>
+    .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 280px;
+    height: 100vh;
+    background-color: #1a1a1a;
+    border-right: 1px solid #333;
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Spaces out the menu items */
+}
+
+    .relationship-content {
+        margin-left: 280px; /* Match the sidebar width exactly */
+        padding: 20px;
+    }
+</style>
+</head>
+<body>
+<nav class="sidebar">
+    <h3>Relationship Calculator</h3>
+    <a href="index.html">Back to Main Search</a>
+    <label>Person A:</label>
+    <select id="personA"></select>
+    
+    <label>Person B:</label>
+    <select id="personB"></select>
+    
+    <button id="calcBtn">Calculate Relationship</button>
+</nav>
+
+<!-- Move the result div inside this wrapper -->
+<div class="relationship-content">
+    <div id="result" style="padding: 20px; font-size: 1.2em; font-weight: bold;"></div>
+</div>
+
+<script src="script.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        onDataReady(() => {
+            const options = genealogyData.map(p => ({value: p.IndividualUID, text: p["Name Array"]}));
+            const selectA = new TomSelect("#personA", { options, persist: true });
+            const selectB = new TomSelect("#personB", { options, persist: true });
+
+            document.getElementById('calcBtn').addEventListener('click', () => {
+                const idA = selectA.getValue();
+                const idB = selectB.getValue();
+                const resultDiv = document.getElementById('result');
+                
+                if (!idA || !idB) return;
+                
+                // Get display names
+                const nameA = selectA.getItem(idA)?.textContent || "Person A";
+                const nameB = selectB.getItem(idB)?.textContent || "Person B";
+
+                if (idA === idB) {
+                    resultDiv.innerHTML = `<span class="relationship-label">They are the same person!</span>`;
+                    return;
+                }
+
+                const pathA = getAncestors(idA);
+                const pathB = getAncestors(idB);
+                
+                let commonAncestor = pathA.find(a => pathB.includes(a));
+
+                if (!commonAncestor) {
+                    resultDiv.innerHTML = `<span class="relationship-label">No common ancestor found.</span>`;
+                } else {
+                    const genA = pathA.indexOf(commonAncestor);
+                    const genB = pathB.indexOf(commonAncestor);
+                    
+                    let d1 = genA; 
+                    let d2 = genB;
+                    let minD = Math.min(d1, d2);
+                    let maxD = Math.max(d1, d2);
+                    let diff = maxD - minD;
+                    let relationship = "";
+
+                    // 1. SIBLINGS
+                    if (d1 === 1 && d2 === 1) {
+                        relationship = "Sibling";
+                    } 
+                    // 2. DIRECT DESCENDANT
+                    else if (minD === 0) {
+                        let terms = ["Child", "Grandchild", "Great-Grandchild", "Great-Great-Grandchild"];
+                        relationship = maxD <= 4 ? terms[maxD - 1] || "Descendant" : "Descendant";
+                    }
+                    // 3. AUNT/UNCLE / NIECE/NEPHEW
+                    else if (minD === 1 && maxD === 2) {
+                        relationship = (d1 < d2) ? "Aunt/Uncle" : "Niece/Nephew";
+                    }
+                    // 4. COUSINS (Same generation)
+                    else if (d1 === d2) {
+                        let degree = d1 - 1;
+                        let suffix = (degree === 1) ? "st" : (degree === 2) ? "nd" : (degree === 3) ? "rd" : "th";
+                        relationship = `${degree}${suffix} Cousin`;
+                    } 
+                    // 5. REMOVED COUSINS
+                    else {
+                        let degree = minD - 1;
+                        let suffix = (degree === 1) ? "st" : (degree === 2) ? "nd" : (degree === 3) ? "rd" : "th";
+                        relationship = `${degree}${suffix} Cousin, ${diff} time${diff > 1 ? 's' : ''} removed`;
+                    }
+
+                    resultDiv.innerHTML = `
+                        <span class="ancestor-label">Common Ancestor: ${getName(commonAncestor)}</span>
+                        <span class="relationship-label">
+                            <strong>${nameA}</strong> is a(n) <strong>${relationship}</strong> to <strong>${nameB}</strong>
+                        </span>
+                    `;
+                }
+            });
+        });
+    });
+
+    function getAncestors(uid) {
+        let path = [];
+        let current = genealogyData.find(p => p.IndividualUID == uid);
+        while (current) {
+            path.push(current.IndividualUID);
+            current = genealogyData.find(p => p.IndividualUID == current.ParentUID);
+        }
+        return path;
+    }
+
+    function getName(uid) {
+        return genealogyData.find(p => p.IndividualUID == uid)?.["Name Array"] || "Unknown";
+    }
+</script>
+</body>
+</html>
