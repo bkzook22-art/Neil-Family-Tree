@@ -10325,15 +10325,15 @@
         "Gender":  "Male",
         "Born":  null,
         "Died":  null,
-        "Notes":  "Partner of Melanie Gore",
+        "Notes":  "Partner of Melanie McGhan",
         "Relationship":  "Partner of my Half-Sister",
         "Name Array":  "Shawn Hill",
-        "Partner 1":  "Melanie Gore",
+        "Partner 1":  "Melanie McGhan",
         "Partner 2":  "",
         "Partner 3":  "",
         "Partner 4":  "",
         "Partner 5":  "",
-        "Partner Array":  "Melanie Gore"
+        "Partner Array":  "Melanie McGhan"
     },
     {
         "IndividualUID":  "P545",
@@ -10344,7 +10344,7 @@
         "Gender":  "Female",
         "Born":  null,
         "Died":  null,
-        "Notes":  "Child of Melanie Gore",
+        "Notes":  "Child of Melanie McGhan",
         "Relationship":  "Neice",
         "Name Array":  "Temperance Hill",
         "Partner 1":  "None",
